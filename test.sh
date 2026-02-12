@@ -36,6 +36,22 @@ rpc_is_ready() {
   return 0
 }
 
+# Function to wait for the validator to produce confirmed blocks
+wait_for_confirmed_blocks() {
+  MIN_SLOT=${1:-10}
+  echo "Waiting for validator to produce confirmed blocks..."
+  for i in $(seq 1 60); do
+    SLOT=$(solana slot --commitment confirmed 2>/dev/null)
+    if [ -n "$SLOT" ] && [ "$SLOT" -gt "$MIN_SLOT" ] 2>/dev/null; then
+      echo "Validator is producing confirmed blocks (slot: $SLOT)."
+      return 0
+    fi
+    sleep 1
+  done
+  echo "WARNING: Timed out waiting for confirmed blocks."
+  return 1
+}
+
 # Ensure the local validator is not already running
 echo "Checking for existing local validator..."
 pkill -f solana-test-validator || true
@@ -64,11 +80,18 @@ for TEST_FILE in tests/${test_file_name}.test.ts; do
     echo "validator PID: $VALIDATOR_PID"
   done
 
+  # Wait for the validator to produce confirmed blocks before deploying
+  wait_for_confirmed_blocks
+
   solana program show SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy
 
   # Deploy the program
   echo "Deploying program..."
   $DEPLOY_PROGRAM
+
+  # Ensure new confirmed blocks are produced after deployment so recent blockhashes are usable.
+  SLOT_AFTER_DEPLOY=$(solana slot --commitment confirmed 2>/dev/null || echo 0)
+  wait_for_confirmed_blocks $((SLOT_AFTER_DEPLOY + 5))
 
   # Run the test file
   echo "Running test file: $TEST_FILE"

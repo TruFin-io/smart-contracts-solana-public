@@ -104,7 +104,7 @@ anchor --version
 You may need to run the following commands:
 ```sh
 solana-keygen new --no-bip39-passphrase
-npm i
+yarn
 ```
 
 ## Build and Run tests

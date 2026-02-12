@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { BN } from "@coral-xyz/anchor";
-import { Keypair, PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
+import { Keypair, PublicKey, Transaction, TransactionInstruction, SystemProgram, StakeProgram } from '@solana/web3.js';
 import { Staker } from "../target/types/staker";
 import { STAKE_POOL_PROGRAM_ID, initStaker, createStakePool, updateValidatorListBalance, getStakePool, decodeValidatorListAccount, getEvent } from "./helpers";
 import { CreateStakePoolResponse, StakeStatus } from "./stake_pool/types";
@@ -99,13 +99,12 @@ describe("validators", () => {
         })
         .signers([user])
         .rpc();
-      
+
       throw new Error("Add validator should fail");
     } catch (e) {
       assert.strictEqual(e.error.errorCode.code, "NotAuthorized");
     }
   });
-
 
   it("Adds a validator to the pool", async () => {
     // check that the pool has no validators
@@ -137,14 +136,14 @@ describe("validators", () => {
     const txHash = await program.provider.sendAndConfirm(tx, [owner.payer], {
       commitment: "confirmed",
     })
-  
+
     assert.ok(txHash);
 
     // verify the ValidatorAdded event was emitted with the correct data
     const event = await getEvent(program, txHash, "validatorAdded");
     assert.ok(event);
     assert.strictEqual(event.data.validator.toBase58(), validatorVoteAccount.toBase58());
-    
+
     // verify the validator was added to the pool
     const poolAfter = await getStakePool(connection, stakePoolInfo.accounts.stakePoolAccount);
     const validatorListAfter = await decodeValidatorListAccount(connection, poolAfter.validatorList);
@@ -274,7 +273,7 @@ describe("validators", () => {
 
     // send the CleanupRemovedValidatorEntries transaction
     const tx = new Transaction().add(cleanupIx);
-    let txSig = await provider.sendAndConfirm(tx, [user]); 
+    let txSig = await provider.sendAndConfirm(tx, [user]);
     assert.ok(txSig);
 
     // verify the validator was removed from the pool
@@ -282,4 +281,85 @@ describe("validators", () => {
     assert.equal(validatorListPost.validators.length, 0);
   });
 
+  it("AddValidator fails when signer has insufficient lamports", async () => {
+    // Minimum amount of staked lamports required in a validator stake account to allow for merges
+    // without a mismatch on credits observed
+    const MINIMUM_ACTIVE_STAKE = 1_000_000;
+
+    // Stake minimum delegation, currently 1 SOL in testnet, 1 lamport in devnet and mainnet
+    const stakeMinDelegation = await connection.getStakeMinimumDelegation();
+
+    // The minimum delegation must be at least the minimum active stake
+    const minDelegation = Math.max(stakeMinDelegation.value, MINIMUM_ACTIVE_STAKE);
+    const stakeAccountRent = await connection.getMinimumBalanceForRentExemption(StakeProgram.space);
+
+    // The minimum balance required in a stake account is the minimum delegation plus rent
+    const minLamportsRequired = minDelegation + stakeAccountRent;
+
+    // Get current owner balance
+    const currentBalance = await connection.getBalance(owner.publicKey);
+
+    // We want the owner to have exactly minLamportsRequired - 1 lamports
+    // after paying for the transaction fee.
+    const targetBalance = minLamportsRequired - 1;
+    const txFee = 5000; // Base fee per signature on Solana
+    const drainAmount = currentBalance - targetBalance - txFee;
+
+    if (drainAmount > 0) {
+      const drainAccount = Keypair.generate();
+
+      await provider.sendAndConfirm(
+        new Transaction().add(
+          SystemProgram.transfer({ fromPubkey: owner.publicKey, toPubkey: drainAccount.publicKey, lamports: drainAmount })
+        ),
+        [owner.payer]
+      );
+    }
+
+    // Guard against fee estimation mismatch by draining any excess once more.
+    let newBal = await connection.getBalance(owner.publicKey);
+    if (newBal > targetBalance) {
+      const extraDrain = newBal - targetBalance - txFee;
+      if (extraDrain > 0) {
+        const drainAccount2 = Keypair.generate();
+        await provider.sendAndConfirm(
+          new Transaction().add(
+            SystemProgram.transfer({ fromPubkey: owner.publicKey, toPubkey: drainAccount2.publicKey, lamports: extraDrain })
+          ),
+          [owner.payer]
+        );
+        newBal = await connection.getBalance(owner.publicKey);
+      }
+    }
+
+    console.log("newBal: ", newBal);
+    console.log("target: ", targetBalance);
+
+    const [validatorStakeAccount] = PublicKey.findProgramAddressSync([
+      validatorVoteAccount.toBuffer(),
+      stakePoolInfo.accounts.stakePoolAccount.toBuffer(),
+    ],
+      STAKE_POOL_PROGRAM_ID
+    );
+
+    try {
+      // send the addValidator transaction
+      const validatorSeed = 0; // optional non-zero u32 seed used for generating the validator
+      await program.methods.addValidator(validatorSeed)
+        .accounts({
+          stakePool: stakePoolInfo.accounts.stakePoolAccount,
+          reserveStake: stakePoolInfo.accounts.reserveStakeAccount,
+          withdrawAuthority: stakePoolInfo.accounts.withdrawAuthorityAccount,
+          validatorList: stakePoolInfo.accounts.validatorListAccount,
+          validatorStakeAccount: validatorStakeAccount,
+          validatorVoteAccount: validatorVoteAccount,
+        })
+        .signers([owner.payer])
+        .rpc();
+
+      throw new Error("Add validator should fail with insufficient lamports");
+    } catch (e) {
+      assert.ok(e.message.includes("insufficient lamports"));
+    }
+  });
 });
