@@ -97,8 +97,17 @@ export async function initStaker(owner: PublicKey, stakeManager: PublicKey): Pro
  export async function moveEpochForward(connection: anchor.web3.Connection, epochCount: number = 1): Promise<void> {
   const initialEpoch = (await connection.getEpochInfo()).epoch;
   while (true) {
-    const currentEpoch = (await connection.getEpochInfo()).epoch;
-    if (currentEpoch >= initialEpoch + epochCount) {
+    const epochInfo = await connection.getEpochInfo();
+    if (epochInfo.epoch >= initialEpoch + epochCount) {
+      // Wait for epoch rewards distribution to complete by ensuring
+      // we're past the first few slots of the new epoch
+      while (true) {
+        const info = await connection.getEpochInfo();
+        if (info.slotIndex > 10) {
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
       break;
     }
     await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -498,9 +507,30 @@ export async function updateValidatorListBalance(
   transaction.recentBlockhash = blockhash;
   transaction.feePayer = provider.publicKey;
 
-  const txHash = await provider.sendAndConfirm(transaction, [], {
-    commitment: "confirmed",
-  });
+  let txHash: string;
+  try {
+    txHash = await provider.sendAndConfirm(transaction, [], {
+      commitment: "confirmed",
+    });
+  } catch (e: any) {
+    // When stake is still transitioning right after validator removal, the cloned stake-pool
+    // program can return Unsupported sysvar on this instruction path.
+    // Move one epoch forward and retry once.
+    const message = e?.message ?? "";
+    if (message.includes("Unsupported sysvar")) {
+      await moveEpochForward(provider.connection, 1);
+      const retryTx = new Transaction().add(updateValidatorListBalanceIx);
+      const { blockhash: retryBlockhash } =
+        await provider.connection.getLatestBlockhash("confirmed");
+      retryTx.recentBlockhash = retryBlockhash;
+      retryTx.feePayer = provider.publicKey;
+      txHash = await provider.sendAndConfirm(retryTx, [], {
+        commitment: "confirmed",
+      });
+    } else {
+      throw e;
+    }
+  }
 
   assert.ok(txHash);
 }
