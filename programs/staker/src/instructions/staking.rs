@@ -252,6 +252,15 @@ pub struct DepositToSpecificValidator<'info> {
 }
 
 /// Processes the `DepositToSpecificValidator` instruction
+///
+/// Permissionless by design: any whitelisted user may deposit to a chosen validator. As a
+/// consequence, a user adding transient stake can briefly delay the stake manager's
+/// rebalancing (stake *decrease*) on that validator for an epoch. This is an accepted,
+/// self-healing trade-off under the permissioned/whitelisted model, not a vulnerability —
+/// no user funds are at risk, no other user's deposit/withdraw path is affected, the actor
+/// bears a real recurring cost (SOL + stake-account rent) and can be removed via whitelist
+/// revocation, and the condition clears as epoch maintenance proceeds. See the
+/// "Stake Management Bot" notes in the README.
 pub fn process_deposit_to_specific_validator(
     ctx: Context<DepositToSpecificValidator>,
     amount: u64,

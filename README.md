@@ -31,8 +31,13 @@ Maintenance tasks include managing stake accounts, distributing staking rewards,
 ### Stake Management Bot
 This bot optimises the allocation of active stake across validators by allocating liquid SOL in the pool reserve or reducing stake on underperforming validators based on performance metrics and other considerations.
 
+Because depositing to a specific validator is permissionless, a whitelisted user can add transient stake to a validator and briefly delay this bot's stake *decrease* / rebalancing on that validator for an epoch. This is an accepted, self-healing trade-off rather than a vulnerability: the delayed operation is yield optimisation (not safety-critical), no user funds are at risk and no other user's deposit or withdrawal path is affected, the actor bears a real recurring cost (SOL plus stake-account rent) on every cycle and can be removed in a single transaction via whitelist revocation, and the condition clears automatically as epoch maintenance proceeds.
+
 
 ## Authorities
+
+### Initialization
+The `owner` and `stake_manager` authorities are set once, at deployment, by the `InitializeStaker` instruction. Initialization is a trusted, one-time deployment step: the live program is already deployed and initialized, so there is no remaining front-run window against it, and the initialization-ordering risk was reviewed and accepted in audit. A hypothetical re-initialization takes no user funds, and the program can be redeployed.
 
 ### Owner 
 The `owner` authority of the Staker program is set during contract initialization to a multi-signature account. 

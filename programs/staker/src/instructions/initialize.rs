@@ -48,6 +48,12 @@ pub struct InitializeStaker<'info> {
 }
 
 /// Processes the `InitializeStaker` instruction
+///
+/// Trusted, one-time deployment step that sets the initial `owner` and `stake_manager`. The
+/// live program is already deployed and initialized, so there is no remaining front-run
+/// window against it; the initialization-ordering risk was reviewed and accepted in audit.
+/// A hypothetical re-initialization takes no user funds, and the program can be redeployed.
+/// See "Authorities" in the README.
 pub fn process_initialize_staker(ctx: Context<InitializeStaker>) -> Result<()> {
     let access_control = &mut ctx.accounts.access;
     access_control.owner = ctx.accounts.owner_info.key();
