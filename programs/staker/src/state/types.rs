@@ -29,3 +29,15 @@ pub enum WhitelistUserStatus {
 #[account]
 #[derive(InitSpace)]
 pub struct StakeManager {}
+
+// marker PDA: existence ⇒ caller is a registered third-party agent (custodian)
+#[account]
+#[derive(InitSpace)]
+pub struct ThirdPartyAgent {}
+
+// records which third-party agent owns (onboarded) a given user
+#[account]
+#[derive(InitSpace)]
+pub struct ThirdPartyUser {
+    pub agent: Pubkey,
+}

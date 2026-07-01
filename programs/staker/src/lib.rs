@@ -73,6 +73,45 @@ pub mod staker {
         whitelist::process_clear_user_status(ctx, user)
     }
 
+    pub fn add_third_party_agent(ctx: Context<AddThirdPartyAgent>, agent: Pubkey) -> Result<()> {
+        third_party_whitelist::process_add_third_party_agent(ctx, agent)
+    }
+
+    pub fn remove_third_party_agent(
+        ctx: Context<RemoveThirdPartyAgent>,
+        agent: Pubkey,
+    ) -> Result<()> {
+        third_party_whitelist::process_remove_third_party_agent(ctx, agent)
+    }
+
+    pub fn third_party_add_user_to_whitelist(
+        ctx: Context<ThirdPartyAddUserToWhitelist>,
+        user: Pubkey,
+    ) -> Result<()> {
+        third_party_whitelist::process_third_party_add_user_to_whitelist(ctx, user)
+    }
+
+    pub fn third_party_add_user_to_blacklist(
+        ctx: Context<ThirdPartyAddUserToBlacklist>,
+        user: Pubkey,
+    ) -> Result<()> {
+        third_party_whitelist::process_third_party_add_user_to_blacklist(ctx, user)
+    }
+
+    pub fn third_party_clear_user_status(
+        ctx: Context<ThirdPartyClearUserStatus>,
+        user: Pubkey,
+    ) -> Result<()> {
+        third_party_whitelist::process_third_party_clear_user_status(ctx, user)
+    }
+
+    pub fn agent_release_third_party_user(
+        ctx: Context<AgentReleaseThirdPartyUser>,
+        user: Pubkey,
+    ) -> Result<()> {
+        third_party_whitelist::process_agent_release_third_party_user(ctx, user)
+    }
+
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         staking::process_deposit(ctx, amount)
     }
