@@ -20,6 +20,7 @@ import {
   getStakePoolSharePrice,
   increaseAdditionalValidatorStake,
   moveEpochForwardAndUpdatePool,
+  setupConfirmedProvider,
 } from "./helpers";
 import { CreateStakePoolResponse} from "./stake_pool/types";
 import {
@@ -32,7 +33,7 @@ import { assert } from "chai";
 
 describe("withdrawals", () => {
 
-  const provider = anchor.AnchorProvider.env();
+  const provider = setupConfirmedProvider();
   const connection = provider.connection;
 
   let program: anchor.Program<Staker>;

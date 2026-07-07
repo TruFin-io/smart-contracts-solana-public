@@ -18,7 +18,7 @@ PROGRAM_ID=`solana address -k accounts/staker-program.json`
 echo "PROGRAM_ID: $PROGRAM_ID"
 
 # Start the local validator with Token Metadata program from devnet and deploy pre-compiled binary of SPL Stake Pool program  
-START_VALIDATOR="solana-test-validator --clone-upgradeable-program metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s --clone-upgradeable-program SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy --url mainnet-beta --slots-per-epoch 128 --reset"
+START_VALIDATOR="solana-test-validator --clone-upgradeable-program metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s --clone-upgradeable-program SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy --url mainnet-beta --slots-per-epoch 32 --reset"
 DEPLOY_PROGRAM="anchor deploy --program-name staker --program-keypair accounts/staker-program.json"
 RUN_TEST="yarn ts-mocha -p ./tsconfig.json -t 1000000"
 

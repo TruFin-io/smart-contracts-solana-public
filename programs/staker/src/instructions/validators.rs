@@ -1,4 +1,6 @@
-use crate::{constants::STAKE_POOL_PROGRAM_ID, error::ErrorCode, state::*};
+use crate::{
+    constants::MINIMUM_ACTIVE_STAKE, constants::STAKE_POOL_PROGRAM_ID, error::ErrorCode, state::*,
+};
 use anchor_lang::{
     prelude::*,
     solana_program::{
@@ -88,7 +90,8 @@ pub fn process_add_validator(ctx: Context<AddValidator>, validator_seed: u32) ->
     let initial_stake_account_balance = {
         let rent = Rent::get()?.minimum_balance(stake::state::StakeStateV2::size_of());
         let stake_minimum_delegation = stake::tools::get_minimum_delegation()?;
-        rent + stake_minimum_delegation
+        let effective_minimum = std::cmp::max(stake_minimum_delegation, MINIMUM_ACTIVE_STAKE);
+        rent + effective_minimum
     };
 
     // transfer the required SOL to the reserve stake account

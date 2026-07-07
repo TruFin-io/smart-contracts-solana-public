@@ -79,10 +79,20 @@ async function main() {
   // check that the expected SOL is above the minimum withdrawal amount required by the new stake account
   // that will be created to receive the withdrawn stake
   const minLamportsOnStakeAccount = await getMinLamportsOnStakeAccount(connection);
-  const stakeWithdrawalFee = BigInt(100) * stakePool.stakeWithdrawalFee.numerator / stakePool.stakeWithdrawalFee.denominator;
-  console.log(`withdraw fee: ${Number(stakeWithdrawalFee)}%`);  // 1% in devnet
+  
+  // withdrawal fees as a percentage
+  const feePrecision = 1e4;
+  const stakeWithdrawalFee = Number(
+    BigInt(feePrecision) * stakePool.stakeWithdrawalFee.numerator / stakePool.stakeWithdrawalFee.denominator
+  ) / feePrecision;
 
-  const minSolWithdrawalBeforeFees = Math.round(minLamportsOnStakeAccount / (1 - Number(stakeWithdrawalFee) / 100));
+  console.log(`Stake Withdrawal Fee percentage: ${Number(stakeWithdrawalFee * 100)}%`);  // 1% in devnet 0.1% in devnet
+
+  // add the expected fees to the `minLamportsOnStakeAccount` to ensure the min lamports requirement in the stake account is fulfilled
+  // after the fees are deducted by the pool from the amount withdrawn.
+  const minSolWithdrawalBeforeFees = Math.round(minLamportsOnStakeAccount  + (stakeWithdrawalFee * minLamportsOnStakeAccount));
+  
+  console.log("Expected fee:", Math.round(expectedSOL * stakeWithdrawalFee), "lamports");
   console.log("Min SOL to leave on stake account:", minLamportsOnStakeAccount);
   console.log("Min SOL to withdraw (before fees):", minSolWithdrawalBeforeFees);
 

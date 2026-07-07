@@ -21,6 +21,17 @@ This is useful in emergencies, allowing the protocol to suspend operations while
 - Withdrawals: TruSOL tokens can be redeemed for staked SOL directly from the stake pool by invoking the `WithdrawStake` instruction of the Stake Pool Program. SOL withdrawals are not permitted. Whitelist checks are not enforced on withdrawals.
 
 
+## Fees
+The pool inherits the standard Solana Stake Pool Program's fee fields. TruStake uses only the epoch (reward) fee and the withdrawal fee. The **deposit fee and referral fee are intentionally fixed at zero and are never enabled** — they exist only because they are part of the underlying Stake Pool Program, not because TruStake operates a deposit-fee or referral program.
+
+- Epoch (reward) fee: a percentage of staking rewards, paid to the manager fee account each epoch. Active.
+- Withdrawal fee: a small percentage charged on `WithdrawStake`. Active.
+- Deposit fee: `0`. Not used and will not be enabled.
+- Referral fee: `0`. Not used and will not be enabled.
+
+Because the deposit and referral fees are fixed at zero, no pool tokens are ever minted to a deposit-fee or referral-fee account during a deposit. Consequently the `referral_fee_token_account` passed into the deposit instructions is inert: it is a caller-supplied account (as the Stake Pool Program's `DepositSol` CPI requires), but with a zero referral fee nothing is ever routed to it, so whichever account it points to cannot affect any funds. These values are set at pool initialization (`scripts/init-pool.ts`) and are not changed.
+
+
 ## Backend Processes
 We run two backend processes to ensure smooth operations:
 

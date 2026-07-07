@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { AnchorProvider, BN, Wallet, web3 } from "@coral-xyz/anchor";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { Keypair, PublicKey, StakeProgram, Transaction, TransactionInstruction } from "@solana/web3.js";
+import { ComputeBudgetProgram, Keypair, PublicKey, StakeProgram, Transaction, TransactionInstruction } from "@solana/web3.js";
 import * as fs from "fs";
 import { decodeValidatorListAccount, getStakePool } from "../tests/helpers";
 import { getConnection, getStakePoolProgramId, getStakePoolAccount } from "./utils";
@@ -103,9 +103,17 @@ async function main() {
     data: instructionData,
   });
 
+  const setCuLimitIx = ComputeBudgetProgram.setComputeUnitLimit({
+    units: 1_200_000,
+  });
+  
+  const setCuPriceIx = ComputeBudgetProgram.setComputeUnitPrice({
+    microLamports: 1_000,
+  });
+
   // send the UpdateValidatorListBalance transaction
   const updateValidatorListTx = await provider.sendAndConfirm(
-    new Transaction().add(updateValidatorListBalanceIx)
+    new Transaction().add(setCuLimitIx, setCuPriceIx, updateValidatorListBalanceIx)
   );
   console.log("UpdateValidatorListBalance tx:", updateValidatorListTx);
 

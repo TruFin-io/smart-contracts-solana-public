@@ -1,4 +1,4 @@
-import { getEvent } from './helpers';
+import { getEvent , setupConfirmedProvider} from './helpers';
 import * as anchor from "@coral-xyz/anchor";
 import { assert } from "chai";
 import { Keypair, PublicKey} from '@solana/web3.js';
@@ -6,7 +6,7 @@ import { Staker } from "../target/types/staker";
 
 describe("Staker init", () => {
 
-  const provider = anchor.AnchorProvider.env();
+  const provider = setupConfirmedProvider();
   anchor.setProvider(provider);
   let program = anchor.workspace.Staker as anchor.Program<Staker>;
 

@@ -9,3 +9,7 @@ pub const STAKE_POOL_PROGRAM_ID: Pubkey = Pubkey::new_from_array([
 pub const ANCHOR_DISCRIMINATOR: usize = 8;
 
 pub const ONE_SOL: u64 = 1_000_000_000; // 1 SOL in lamports
+
+/// Minimum amount of staked lamports required in a validator stake account to
+/// allow for merges without a mismatch on credits observed
+pub const MINIMUM_ACTIVE_STAKE: u64 = 1_000_000;

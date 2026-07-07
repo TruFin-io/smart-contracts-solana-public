@@ -1,5 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
-import { initStaker, fetchEvent, getEvent, requestAirdrop } from "./helpers";
+import { initStaker, fetchEvent, getEvent, requestAirdrop , setupConfirmedProvider} from "./helpers";
 import { assert } from "chai";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { Staker } from "../target/types/staker";
@@ -7,7 +7,7 @@ import { getAccount } from "@solana/spl-token";
 
 describe("Setters", () => {
   
-  const provider = anchor.AnchorProvider.env();
+  const provider = setupConfirmedProvider();
 
   let program: anchor.Program<Staker>;
   let accessAddress: PublicKey;
