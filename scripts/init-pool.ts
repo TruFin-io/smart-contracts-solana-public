@@ -149,8 +149,8 @@ async function main() {
     instruction: 0, // Instruction index for `Initialize`
     fee: new Fee({ numerator: 5, denominator: 100 }),
     withdrawalFee: new Fee({ numerator: 1, denominator: 1000 }),
-    depositFee: new Fee({ numerator: 0, denominator: 100 }),
-    referralFee: 0, // no deposit fee goes to referrer
+    depositFee: new Fee({ numerator: 0, denominator: 100 }), // fixed at zero, never enabled (see README "Fees")
+    referralFee: 0, // fixed at zero, never enabled (see README "Fees")
     maxValidators: MAX_VALIDATORS, // maximum number of validators matching the size of the validator list account
   });
 

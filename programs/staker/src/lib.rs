@@ -19,7 +19,7 @@ security_txt! {
     contacts: "email:security@trufinlabs.com.",
     policy: "https://immunefi.com/bug-bounty/trufin/information/#top",
     preferred_languages: "en",
-    source_code: "https://github.com/TruFin-io/solana-smart-contracts"
+    source_code: "https://github.com/TruFin-io/smart-contracts-solana-public"
 }
 
 #[program]

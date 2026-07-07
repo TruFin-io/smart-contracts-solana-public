@@ -2,14 +2,14 @@ import * as anchor from "@coral-xyz/anchor";
 import { BN } from "@coral-xyz/anchor";
 import { Keypair, PublicKey, Transaction, TransactionInstruction, SystemProgram, StakeProgram } from '@solana/web3.js';
 import { Staker } from "../target/types/staker";
-import { STAKE_POOL_PROGRAM_ID, initStaker, createStakePool, updateValidatorListBalance, getStakePool, decodeValidatorListAccount, getEvent } from "./helpers";
+import { STAKE_POOL_PROGRAM_ID, initStaker, createStakePool, updateValidatorListBalance, getStakePool, decodeValidatorListAccount, getEvent , setupConfirmedProvider} from "./helpers";
 import { CreateStakePoolResponse, StakeStatus } from "./stake_pool/types";
 
 import { assert } from "chai";
 
 describe("validators", () => {
 
-  const provider = anchor.AnchorProvider.env();
+  const provider = setupConfirmedProvider();
   const connection = provider.connection;
 
   let program: anchor.Program<Staker>;

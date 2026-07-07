@@ -63,7 +63,8 @@ pub struct Deposit<'info> {
     #[account(mut)]
     pub pool_mint: AccountInfo<'info>,
 
-    /// CHECK: Referral fee token account (can be same as fee)
+    /// CHECK: Referral fee token account (can be same as fee). The referral fee is fixed at
+    /// zero and never enabled (see README "Fees"), so no tokens are ever routed here.
     #[account(mut)]
     pub referral_fee_token_account: AccountInfo<'info>,
 
@@ -200,7 +201,8 @@ pub struct DepositToSpecificValidator<'info> {
     #[account(mut)]
     pub pool_mint: AccountInfo<'info>,
 
-    /// CHECK: Referral fee token account (can be same as fee)
+    /// CHECK: Referral fee token account (can be same as fee). The referral fee is fixed at
+    /// zero and never enabled (see README "Fees"), so no tokens are ever routed here.
     #[account(mut)]
     pub referral_fee_token_account: AccountInfo<'info>,
 

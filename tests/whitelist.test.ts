@@ -1,12 +1,12 @@
 import * as anchor from "@coral-xyz/anchor";
-import { fetchEvent, initStaker } from "./helpers";
+import { fetchEvent, initStaker , setupConfirmedProvider} from "./helpers";
 import { assert } from "chai";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { Staker } from "../target/types/staker";
 
 describe("Whitelist", () => {
 
-  const provider = anchor.AnchorProvider.env();
+  const provider = setupConfirmedProvider();
 
   let program: anchor.Program<Staker>;
   let user: Keypair;

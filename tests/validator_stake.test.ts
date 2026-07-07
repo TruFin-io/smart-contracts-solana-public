@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { BN } from "@coral-xyz/anchor";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey, StakeProgram, Transaction, TransactionInstruction } from '@solana/web3.js';
 import { Staker } from "../target/types/staker";
-import { STAKE_POOL_PROGRAM_ID, initStaker, createStakePool, addUserToWhitelist, requestAirdrop, getEvent, moveEpochForwardAndUpdatePool } from "./helpers";
+import { STAKE_POOL_PROGRAM_ID, initStaker, createStakePool, addUserToWhitelist, requestAirdrop, getEvent, moveEpochForwardAndUpdatePool , setupConfirmedProvider} from "./helpers";
 import { CreateStakePoolResponse } from "./stake_pool/types";
 
 import { assert } from "chai";
@@ -10,7 +10,7 @@ import { createAssociatedTokenAccountInstruction, getAssociatedTokenAddress } fr
 
 describe("validator stake", () => {
 
-  const provider = anchor.AnchorProvider.env();
+  const provider = setupConfirmedProvider();
   const connection = provider.connection;
 
   let program: anchor.Program<Staker>;

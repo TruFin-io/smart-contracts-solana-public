@@ -17,6 +17,23 @@ import { assert } from "chai";
 // Constants
 export const STAKE_POOL_PROGRAM_ID = new PublicKey( "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy");
 
+// Confirmed-commitment confirm options used everywhere we send transactions.
+// Aligning the blockhash fetch and preflight simulation to the same commitment
+// avoids the local validator's intermittent "Blockhash not found".
+export const CONFIRMED_OPTS = {
+  commitment: "confirmed",
+  preflightCommitment: "confirmed",
+} as const;
+
+// Builds a provider with confirmed commitment + preflight, registers it as the
+// global Anchor provider (so anchor.workspace programs use it), and returns it.
+// Call this once at the top of every test suite instead of AnchorProvider.env().
+export function setupConfirmedProvider(): AnchorProvider {
+  const provider = AnchorProvider.local(undefined, CONFIRMED_OPTS);
+  anchor.setProvider(provider);
+  return provider;
+}
+
 export async function fetchEvent(
   program: anchor.Program<Staker>,
   tx: anchor.web3.Transaction,
@@ -161,7 +178,7 @@ export async function createStakePool(
 ): Promise<CreateStakePoolResponse> {
   console.log("Creating stake pool for staker ", stakerProgramId.toBase58());
 
-  const provider = AnchorProvider.local();
+  const provider = AnchorProvider.local(undefined, CONFIRMED_OPTS);
   const connection = provider.connection;
   const wallet = provider.wallet as anchor.Wallet;
 
@@ -368,7 +385,7 @@ export async function addValidatorToStakePool(
   validatorList: PublicKey,
 ) {
 
-  const provider = AnchorProvider.local();
+  const provider = AnchorProvider.local(undefined, CONFIRMED_OPTS);
 
   // Transfer SOL to the pool reserve account to fund the validator stake account
   const depositTx = new Transaction().add(
@@ -452,7 +469,7 @@ export async function updateValidatorListBalance(
   transientStakeSeed: number = 0
 ) {
 
-  const provider = AnchorProvider.local();
+  const provider = AnchorProvider.local(undefined, CONFIRMED_OPTS);
 
   // derive the validator transient stake account PDA
   const [transientStakeAccount] = await PublicKey.findProgramAddressSync(
@@ -545,7 +562,7 @@ export async function updatePoolStakeBalance(
   feeAccount: PublicKey,
 ) {
 
-  const provider = AnchorProvider.local();
+  const provider = AnchorProvider.local(undefined, CONFIRMED_OPTS);
 
   // Construct the UpdateStakePoolBalance instruction
   const updateStakePoolBalanceIx = new TransactionInstruction({
@@ -586,7 +603,7 @@ export async function increaseAdditionalValidatorStake(
   transientStakeSeed: number = 0,
 ) {
 
-  const provider = AnchorProvider.local();
+  const provider = AnchorProvider.local(undefined, CONFIRMED_OPTS);
   const connection = provider.connection;
 
   // find ephemeral uninitialized stake account

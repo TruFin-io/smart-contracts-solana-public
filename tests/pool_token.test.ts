@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { BN } from "@coral-xyz/anchor";
 import * as borsh from "borsh";
 import { LAMPORTS_PER_SOL, Keypair, PublicKey, Transaction } from "@solana/web3.js";
-import { initStaker, createStakePool, addUserToWhitelist, deposit } from "./helpers";
+import { initStaker, createStakePool, addUserToWhitelist, deposit , setupConfirmedProvider} from "./helpers";
 import { CreateStakePoolResponse, DataV2, DataV2Schema } from "./stake_pool/types";
 import { createPoolTokenMetadata } from "@solana/spl-stake-pool";
 import { assert } from "chai";
@@ -13,7 +13,7 @@ import { Staker } from "../target/types/staker";
 
 describe("TruSOL", () => {
 
-  const provider = anchor.AnchorProvider.env();
+  const provider = setupConfirmedProvider();
   let wallet = provider.wallet as anchor.Wallet;
   let manager = Keypair.generate();
   let stakeManager = Keypair.generate();
