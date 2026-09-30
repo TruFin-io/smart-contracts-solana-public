@@ -263,6 +263,10 @@ pub struct DepositToSpecificValidator<'info> {
 /// bears a real recurring cost (SOL + stake-account rent) and can be removed via whitelist
 /// revocation, and the condition clears as epoch maintenance proceeds. See the
 /// "Stake Management Bot" notes in the README.
+///
+/// `ephemeral_stake_seed` is the caller-supplied SPL ephemeral stake seed; passing a fresh
+/// (e.g. random) seed each call lets callers route around a poisoned pool-global ephemeral PDA
+/// instead of being stuck on a single hardcoded address.
 pub fn process_deposit_to_specific_validator(
     ctx: Context<DepositToSpecificValidator>,
     amount: u64,

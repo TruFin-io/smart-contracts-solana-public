@@ -1,5 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import * as borsh from "borsh";
+import { randomBytes } from "crypto";
 import { AnchorProvider, web3, BN } from "@coral-xyz/anchor";
 import { Staker } from "../target/types/staker";
 
@@ -16,6 +17,50 @@ import { assert } from "chai";
 
 // Constants
 export const STAKE_POOL_PROGRAM_ID = new PublicKey( "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy");
+
+// SPL Stake Pool PDA derivations for the validator-specific stake accounts.
+// The ephemeral PDA is pool-global (seed only); the transient PDA is per-validator.
+export function findEphemeralStakeAccount(stakePool: PublicKey, seed: number | BN): PublicKey {
+  const [pda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("ephemeral"), stakePool.toBuffer(), new BN(seed).toArrayLike(Buffer, "le", 8)],
+    STAKE_POOL_PROGRAM_ID
+  );
+  return pda;
+}
+
+export function findTransientStakeAccount(
+  validatorVoteAccount: PublicKey,
+  stakePool: PublicKey,
+  seed: number | BN
+): PublicKey {
+  const [pda] = PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("transient"),
+      validatorVoteAccount.toBuffer(),
+      stakePool.toBuffer(),
+      new BN(seed).toArrayLike(Buffer, "le", 8),
+    ],
+    STAKE_POOL_PROGRAM_ID
+  );
+  return pda;
+}
+
+export function findValidatorStakeAccount(
+  validatorVoteAccount: PublicKey,
+  stakePool: PublicKey
+): PublicKey {
+  const [pda] = PublicKey.findProgramAddressSync(
+    [validatorVoteAccount.toBuffer(), stakePool.toBuffer()],
+    STAKE_POOL_PROGRAM_ID
+  );
+  return pda;
+}
+
+// A fresh random u64 to use as the ephemeral stake seed. Using a new value per call keeps the
+// pool-global ephemeral PDA unpredictable so it cannot be pre-funded / poisoned ahead of time.
+export function randomStakeSeed(): BN {
+  return new BN(randomBytes(8));
+}
 
 // Confirmed-commitment confirm options used everywhere we send transactions.
 // Aligning the blockhash fetch and preflight simulation to the same commitment
@@ -171,10 +216,23 @@ export async function getStakePool(connection: anchor.web3.Connection, stakePool
   return stakePool;
 }
 
+export type StakePoolFees = {
+  epochFee: { numerator: number; denominator: number };
+  withdrawalFee: { numerator: number; denominator: number };
+  depositFee: { numerator: number; denominator: number };
+};
+
+const DEFAULT_STAKE_POOL_FEES: StakePoolFees = {
+  epochFee: { numerator: 2, denominator: 100 },
+  withdrawalFee: { numerator: 1, denominator: 100 },
+  depositFee: { numerator: 1, denominator: 100 },
+};
+
 export async function createStakePool(
   stakerProgramId: PublicKey,
   managerKeypair: Keypair,
   stakerKeypair: Keypair,
+  fees: StakePoolFees = DEFAULT_STAKE_POOL_FEES,
 ): Promise<CreateStakePoolResponse> {
   console.log("Creating stake pool for staker ", stakerProgramId.toBase58());
 
@@ -283,9 +341,9 @@ export async function createStakePool(
   // Construct the Initialize instruction
   const instructionData = new InitializeData({
     instruction: 0, // Instruction index for `Initialize`
-    fee: new Fee({ numerator: 2, denominator: 100 }),
-    withdrawalFee: new Fee({ numerator: 1, denominator: 100 }),
-    depositFee: new Fee({ numerator: 1, denominator: 100 }),
+    fee: new Fee(fees.epochFee),
+    withdrawalFee: new Fee(fees.withdrawalFee),
+    depositFee: new Fee(fees.depositFee),
     referralFee: 0, // no deposit fee goes to referrer
     maxValidators: MAX_VALIDATORS,
   });

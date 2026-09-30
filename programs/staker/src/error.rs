@@ -22,4 +22,10 @@ pub enum ErrorCode {
     AlreadyCleared,
     #[msg("User is not whitelisted")]
     UserNotWhitelisted,
+    #[msg("User is not eligible for third-party whitelisting")]
+    UserNotEligibleForThirdPartyWhitelisting,
+    #[msg("Signer is not the owner of this third-party user")]
+    NotUserOwner,
+    #[msg("A third-party agent cannot clear a blacklisted user")]
+    CannotClearBlacklistedUser,
 }

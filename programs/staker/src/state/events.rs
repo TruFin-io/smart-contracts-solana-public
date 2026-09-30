@@ -43,6 +43,30 @@ pub struct WhitelistingStatusChanged {
 }
 
 #[event]
+pub struct ThirdPartyAgentAdded {
+    pub agent: Pubkey,
+}
+
+#[event]
+pub struct ThirdPartyAgentRemoved {
+    pub agent: Pubkey,
+}
+
+#[event]
+pub struct ThirdPartyWhitelistingStatusChanged {
+    pub user: Pubkey,
+    pub agent: Pubkey,
+    pub old_status: WhitelistUserStatus,
+    pub new_status: WhitelistUserStatus,
+}
+
+#[event]
+pub struct ThirdPartyUserReleased {
+    pub user: Pubkey,
+    pub agent: Pubkey,
+}
+
+#[event]
 
 pub struct ValidatorAdded {
     pub validator: Pubkey,

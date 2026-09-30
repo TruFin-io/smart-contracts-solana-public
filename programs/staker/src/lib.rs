@@ -73,15 +73,59 @@ pub mod staker {
         whitelist::process_clear_user_status(ctx, user)
     }
 
+    pub fn add_third_party_agent(ctx: Context<AddThirdPartyAgent>, agent: Pubkey) -> Result<()> {
+        third_party_whitelist::process_add_third_party_agent(ctx, agent)
+    }
+
+    pub fn remove_third_party_agent(
+        ctx: Context<RemoveThirdPartyAgent>,
+        agent: Pubkey,
+    ) -> Result<()> {
+        third_party_whitelist::process_remove_third_party_agent(ctx, agent)
+    }
+
+    pub fn third_party_add_user_to_whitelist(
+        ctx: Context<ThirdPartyAddUserToWhitelist>,
+        user: Pubkey,
+    ) -> Result<()> {
+        third_party_whitelist::process_third_party_add_user_to_whitelist(ctx, user)
+    }
+
+    pub fn third_party_add_user_to_blacklist(
+        ctx: Context<ThirdPartyAddUserToBlacklist>,
+        user: Pubkey,
+    ) -> Result<()> {
+        third_party_whitelist::process_third_party_add_user_to_blacklist(ctx, user)
+    }
+
+    pub fn third_party_clear_user_status(
+        ctx: Context<ThirdPartyClearUserStatus>,
+        user: Pubkey,
+    ) -> Result<()> {
+        third_party_whitelist::process_third_party_clear_user_status(ctx, user)
+    }
+
+    pub fn agent_release_third_party_user(
+        ctx: Context<AgentReleaseThirdPartyUser>,
+        user: Pubkey,
+    ) -> Result<()> {
+        third_party_whitelist::process_agent_release_third_party_user(ctx, user)
+    }
+
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         staking::process_deposit(ctx, amount)
     }
 
+    /// `ephemeral_seed`: SPL ephemeral stake seed. The ephemeral stake account is a pool-global
+    /// PDA derived from this seed, and SPL creates it with `Allocate`/`Assign`, which tolerates a
+    /// pre-funded address. Pass a fresh (e.g. random) seed each call so the address is never
+    /// fixed: a poisoned address is simply abandoned by choosing a different seed.
     pub fn deposit_to_specific_validator(
         ctx: Context<DepositToSpecificValidator>,
         amount: u64,
+        ephemeral_seed: u64,
     ) -> Result<()> {
-        staking::process_deposit_to_specific_validator(ctx, amount, 0, 0)
+        staking::process_deposit_to_specific_validator(ctx, amount, 0, ephemeral_seed)
     }
 
     pub fn add_validator(ctx: Context<AddValidator>, validator_seed: u32) -> Result<()> {
@@ -92,17 +136,23 @@ pub mod staker {
         validators::process_remove_validator(ctx)
     }
 
+    /// `ephemeral_seed`: SPL ephemeral stake seed. Pass a fresh (e.g. random) seed each call so
+    /// the pool-global ephemeral PDA is never fixed and a poisoned address can be routed around.
     pub fn increase_validator_stake(
         ctx: Context<IncreaseValidatorStake>,
         amount: u64,
+        ephemeral_seed: u64,
     ) -> Result<()> {
-        validators::process_increase_validator_stake(ctx, amount, 0, 0)
+        validators::process_increase_validator_stake(ctx, amount, 0, ephemeral_seed)
     }
 
+    /// `ephemeral_seed`: SPL ephemeral stake seed. Pass a fresh (e.g. random) seed each call so
+    /// the pool-global ephemeral PDA is never fixed and a poisoned address can be routed around.
     pub fn decrease_validator_stake(
         ctx: Context<DecreaseValidatorStake>,
         amount: u64,
+        ephemeral_seed: u64,
     ) -> Result<()> {
-        validators::process_decrease_validator_stake(ctx, amount, 0, 0)
+        validators::process_decrease_validator_stake(ctx, amount, 0, ephemeral_seed)
     }
 }
