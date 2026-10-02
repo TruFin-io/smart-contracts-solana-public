@@ -44,6 +44,23 @@ async function main() {
     })
     .signers([owner_keypair])
     .rpc();
+    // Comment the line above and uncomment the few lines below to print the transaction
+    // .instruction();
+
+    // const agentAddress = "";
+    // const [agentAccount] = PublicKey.findProgramAddressSync(
+    //   [Buffer.from("agent"), new PublicKey(agentAddress).toBuffer()],
+    //   staker_program_id
+    // );
+    // console.log("agentAccount", agentAccount.toBase58());
+    
+    // const [userWhitelistAccount] = PublicKey.findProgramAddressSync(
+    //   [Buffer.from("user"), user.toBuffer()],
+    //   staker_program_id
+    // );
+    // console.log("userWhitelistAccount", userWhitelistAccount.toBase58());
+
+
   console.log("Whitelist user tx:", tx);
 }
 

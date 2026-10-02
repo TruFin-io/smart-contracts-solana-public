@@ -692,7 +692,7 @@ describe("staking", () => {
     assert.equal(transientStakeAccountBalancePre, 0);
 
     const tx = await program.methods
-      .depositToSpecificValidator(depositAmount)
+      .depositToSpecificValidator(depositAmount, new BN(0))
       .accounts({
         user: user.publicKey,
         stakePool: stakePoolInfo.accounts.stakePoolAccount,
@@ -835,7 +835,7 @@ describe("staking", () => {
 
     try {
       const tx = await program.methods
-        .depositToSpecificValidator(depositAmount)
+        .depositToSpecificValidator(depositAmount, new BN(0))
         .accounts({
           user: user.publicKey,
           stakePool: stakePoolInfo.accounts.stakePoolAccount,

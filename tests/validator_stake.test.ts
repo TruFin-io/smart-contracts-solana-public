@@ -171,7 +171,7 @@ describe("validator stake", () => {
     );
 
     try {
-      await program.methods.increaseValidatorStake(new BN(1 * LAMPORTS_PER_SOL))
+      await program.methods.increaseValidatorStake(new BN(1 * LAMPORTS_PER_SOL), new BN(0))
       .accounts({
         signer: user.publicKey,
         validatorVoteAccount: validatorVoteAccount,
@@ -235,7 +235,7 @@ describe("validator stake", () => {
 
     // increase the validator stake by 3 SOL
     const stakeIncreaseAmount = new BN(3 * LAMPORTS_PER_SOL);
-    const tx = await program.methods.increaseValidatorStake(stakeIncreaseAmount)
+    const tx = await program.methods.increaseValidatorStake(stakeIncreaseAmount, new BN(0))
       .accounts({
         signer: stakeManager.publicKey,
         validatorVoteAccount: validatorVoteAccount,
@@ -311,7 +311,7 @@ describe("validator stake", () => {
 
     // increase the validator stake by 2 SOL
     const stakeIncreaseAmount = new BN(2 * LAMPORTS_PER_SOL);
-    const tx = await program.methods.increaseValidatorStake(stakeIncreaseAmount)
+    const tx = await program.methods.increaseValidatorStake(stakeIncreaseAmount, new BN(0))
       .accounts({
         signer: stakeManager.publicKey,
         validatorVoteAccount: validatorVoteAccount,
@@ -419,7 +419,7 @@ describe("validator stake", () => {
     );
 
     try {
-      await program.methods.decreaseValidatorStake(new BN(2 * LAMPORTS_PER_SOL))
+      await program.methods.decreaseValidatorStake(new BN(2 * LAMPORTS_PER_SOL), new BN(0))
         .accounts({
           signer: user.publicKey,
           validatorVoteAccount: validatorVoteAccount,
@@ -478,7 +478,7 @@ describe("validator stake", () => {
 
     // decrease the validator stake by 2 SOL
     const stakeDecreaseAmount = new BN(2 * LAMPORTS_PER_SOL);
-    const tx = await program.methods.decreaseValidatorStake(stakeDecreaseAmount)
+    const tx = await program.methods.decreaseValidatorStake(stakeDecreaseAmount, new BN(0))
       .accounts({
         signer: stakeManager.publicKey,
         validatorVoteAccount: validatorVoteAccount,
@@ -547,7 +547,7 @@ describe("validator stake", () => {
 
     try {
       // try to decrease the validator stake by 1 SOL
-      await program.methods.decreaseValidatorStake(new BN(1 * LAMPORTS_PER_SOL))
+      await program.methods.decreaseValidatorStake(new BN(1 * LAMPORTS_PER_SOL), new BN(0))
         .accounts({
           signer: stakeManager.publicKey,
           validatorVoteAccount: validatorVoteAccount,
@@ -611,7 +611,7 @@ describe("validator stake", () => {
     const maxDecreaseAmount = new BN(stakeAccountBalancePre - validatorMinStake - stakeAccountRent);
 
     // decrease the validator stake by the maxDecreaseAmount
-    const tx = await program.methods.decreaseValidatorStake(maxDecreaseAmount)
+    const tx = await program.methods.decreaseValidatorStake(maxDecreaseAmount, new BN(0))
       .accounts({
         signer: stakeManager.publicKey,
         validatorVoteAccount: validatorVoteAccount,

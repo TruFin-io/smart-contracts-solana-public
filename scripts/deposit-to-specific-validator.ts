@@ -4,7 +4,7 @@ import { Account, createAssociatedTokenAccountInstruction, getAccount, getAssoci
 import { Keypair, LAMPORTS_PER_SOL, PublicKey, Transaction, TransactionInstruction } from "@solana/web3.js";
 import * as fs from "fs";
 import * as os from "os";
-import { getStakePool } from "../tests/helpers";
+import { getStakePool, randomStakeSeed } from "../tests/helpers";
 import { getConnection, getStakePoolProgramId, getStakerProgramId, getStakePoolAccount } from "./utils";
 
 // Get the Solana connection
@@ -121,13 +121,14 @@ async function main() {
     stake_pool_program_id
   );
 
-  // derive the ephemeral stake account PDA
-  const ephemeralStakeSeed = 0;
+  // derive the ephemeral stake account PDA using a fresh random seed so the pool-global
+  // ephemeral address is never fixed
+  const ephemeralStakeSeed = randomStakeSeed();
   const [ephemeralStakeAccount] = await PublicKey.findProgramAddressSync(
     [
       Buffer.from("ephemeral"),
       stake_pool_account.toBuffer(),
-      new BN(ephemeralStakeSeed).toArrayLike(Buffer, "le", 8),
+      ephemeralStakeSeed.toArrayLike(Buffer, "le", 8),
     ],
     stake_pool_program_id
   );
@@ -142,7 +143,7 @@ async function main() {
   );
 
   // deposit to specific validator instruction
-  const depositIx = await program.methods.depositToSpecificValidator(depositAmount)
+  const depositIx = await program.methods.depositToSpecificValidator(depositAmount, ephemeralStakeSeed)
     .accounts({
       user: user.publicKey,
       stakePool: stake_pool_account,

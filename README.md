@@ -31,6 +31,16 @@ The pool inherits the standard Solana Stake Pool Program's fee fields. TruStake 
 
 Because the deposit and referral fees are fixed at zero, no pool tokens are ever minted to a deposit-fee or referral-fee account during a deposit. Consequently the `referral_fee_token_account` passed into the deposit instructions is inert: it is a caller-supplied account (as the Stake Pool Program's `DepositSol` CPI requires), but with a zero referral fee nothing is ever routed to it, so whichever account it points to cannot affect any funds. These values are set at pool initialization (`scripts/init-pool.ts`) and are not changed.
 
+### Why the epoch and withdrawal fees are load-bearing
+The epoch and withdrawal fees are not only revenue: they are what make donation-based share-price manipulation unprofitable, so **neither will be set to zero**. The reserve stake account can be credited by anyone with a plain `SystemProgram.transfer`, and the permissionless `UpdateStakePoolBalance` folds any such unaccounted lamports into `total_lamports` as reward lamports. The epoch fee is charged on that delta, diluting a donor's own equity, and the withdrawal fee uses ceiling arithmetic, so a dust position cannot be redeemed at all — a one-token holding is consumed entirely by the fee. Together these make the classic donate-then-withdraw sequence non-profitable at any size.
+
+## Deposit sizing and pool bootstrap
+The Staker deliberately imposes no minimum deposit, mints no dead shares at initialization, and applies no virtual share offset. `process_deposit` enforces the whitelist and pause state and forwards the caller's amount to the Stake Pool Program's `DepositSol`; deposit sizing is left to the depositor.
+
+The Stake Pool Program mints 1:1 when a pool holds no assets or has no token supply, and otherwise mints `floor(lamports * supply / total_lamports)`. The 1:1 branch, and the rounding behaviour that makes a very small supply exploitable, are therefore reachable only at a freshly initialised pool or after every holder has exited — which is why TruStake seeds its pool and maintains stake in it. A pool holding live stake and a real token supply prices deposits proportionally, and the floor rounding costs a depositor at most one token.
+
+These properties are why no economic floor is enforced in the program: the conditions under which one would matter do not occur on a funded pool, deposits are restricted to whitelisted users who complete AML/KYC checks and whose access can be revoked, and the fee configuration above removes the profit from attempting to manufacture them.
+
 
 ## Backend Processes
 We run two backend processes to ensure smooth operations:
@@ -43,6 +53,9 @@ Maintenance tasks include managing stake accounts, distributing staking rewards,
 This bot optimises the allocation of active stake across validators by allocating liquid SOL in the pool reserve or reducing stake on underperforming validators based on performance metrics and other considerations.
 
 Because depositing to a specific validator is permissionless, a whitelisted user can add transient stake to a validator and briefly delay this bot's stake *decrease* / rebalancing on that validator for an epoch. This is an accepted, self-healing trade-off rather than a vulnerability: the delayed operation is yield optimisation (not safety-critical), no user funds are at risk and no other user's deposit or withdrawal path is affected, the actor bears a real recurring cost (SOL plus stake-account rent) on every cycle and can be removed in a single transaction via whitelist revocation, and the condition clears automatically as epoch maintenance proceeds.
+
+#### Ephemeral stake seed
+The validator-specific instructions (`deposit_to_specific_validator`, `increase_validator_stake`, `decrease_validator_stake`) invoke the Stake Pool Program's *additional* stake operations, which use a short-lived **ephemeral** stake account. That account is a pool-global PDA derived from a caller-chosen `u64` seed, and the Stake Pool Program creates it with `Allocate`/`Assign`, which tolerates an address that already holds lamports. Each instruction therefore takes a required `ephemeral_seed`, and callers must pass a fresh (e.g. random) seed on every call together with the matching ephemeral account. This prevents a persistent denial of service in which someone pre-funds a single fixed ephemeral address to permanently block rebalancing: because the seed is not fixed, a poisoned address is simply abandoned in favour of a fresh one.
 
 
 ## Authorities
