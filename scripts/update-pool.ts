@@ -1,9 +1,15 @@
 import * as anchor from "@coral-xyz/anchor";
-import { AnchorProvider, BN, Wallet, web3 } from "@coral-xyz/anchor";
+import { AnchorProvider, Wallet, web3 } from "@coral-xyz/anchor";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { ComputeBudgetProgram, Keypair, PublicKey, StakeProgram, Transaction, TransactionInstruction } from "@solana/web3.js";
 import * as fs from "fs";
-import { decodeValidatorListAccount, getStakePool, recordedTransientStakeSeed } from "../tests/helpers";
+import {
+  decodeValidatorListAccount,
+  findValidatorStakeAccount,
+  getStakePool,
+  recordedTransientStakeSeed,
+  recordedValidatorSeed,
+} from "../tests/helpers";
 import { getConnection, getStakePoolProgramId, getStakePoolAccount } from "./utils";
 
 // Get the Solana connection
@@ -33,27 +39,16 @@ async function main() {
   // derive the stake account and the transient account for all validators in the pool
   const validatorAccounts = validatorList.validators.flatMap((validator) => {
       console.log(`Validator: ${validator.vote_account_address.toBase58()}`);
-      const validator_seed_suffix = validator.validator_seed_suffix;
-
-      // if seed is 0 it means the validator is not using a seed
-      const validatorStakeAccountSeeds = (validator_seed_suffix === 0)?
-        [
-          validator.vote_account_address.toBuffer(),
-          stake_pool_account.toBuffer(),
-        ]
-      :
-        [
-          validator.vote_account_address.toBuffer(),
-          stake_pool_account.toBuffer(),
-          new BN(validator_seed_suffix).toArrayLike(Buffer, "le", 8),
-        ]
-
-      const [validatorStakeAccount] = PublicKey.findProgramAddressSync(validatorStakeAccountSeeds, stake_pool_program_id);
-      console.log("  validatorStakeAccount PDA:", validatorStakeAccount.toBase58(), "validator_seed_suffix: ", validator_seed_suffix);
+      // The validator seed is a u32 and the transient seed a u64, each as recorded in the list. A
+      // wrong address for either makes SPL skip the validator and the pool update fail as out of date.
+      const validatorSeed = recordedValidatorSeed(validator);
+      const validatorStakeAccount = findValidatorStakeAccount(
+        validator.vote_account_address, stake_pool_account, validatorSeed, stake_pool_program_id
+      );
+      console.log("  validatorStakeAccount PDA:", validatorStakeAccount.toBase58(), "validator_seed_suffix: ", validatorSeed);
 
       // the recorded transient seed is a full u64 (chosen at random since #159), so it must not
-      // go through a JS number: that only holds 53 bits, and BN throws on anything larger. A
-      // wrong address here makes SPL skip the validator and the pool update fail as out of date.
+      // go through a JS number: that only holds 53 bits, and BN throws on anything larger.
       const transientStakeSeed = recordedTransientStakeSeed(validator);
       const [transientStakeAccount] = PublicKey.findProgramAddressSync(
         [

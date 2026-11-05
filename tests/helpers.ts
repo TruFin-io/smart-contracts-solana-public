@@ -45,14 +45,22 @@ export function findTransientStakeAccount(
   return pda;
 }
 
+// The validator seed is a u32 (SPL's `Option<NonZeroU32>`), unlike the u64 transient and ephemeral
+// seeds: seed 0 adds no seed bytes, any other seed adds 4 little-endian bytes. Pass the validator
+// list's `validator_seed_suffix` (see recordedValidatorSeed); a wrong address makes
+// UpdateValidatorListBalance skip the validator without an error. Scripts pass the configured
+// stake pool program, which is not SPL's on devnet.
 export function findValidatorStakeAccount(
   validatorVoteAccount: PublicKey,
-  stakePool: PublicKey
+  stakePool: PublicKey,
+  validatorSeed: number = 0,
+  stakePoolProgramId: PublicKey = STAKE_POOL_PROGRAM_ID
 ): PublicKey {
-  const [pda] = PublicKey.findProgramAddressSync(
-    [validatorVoteAccount.toBuffer(), stakePool.toBuffer()],
-    STAKE_POOL_PROGRAM_ID
-  );
+  const seeds = [validatorVoteAccount.toBuffer(), stakePool.toBuffer()];
+  if (validatorSeed !== 0) {
+    seeds.push(new BN(validatorSeed).toArrayLike(Buffer, "le", 4));
+  }
+  const [pda] = PublicKey.findProgramAddressSync(seeds, stakePoolProgramId);
   return pda;
 }
 
@@ -88,6 +96,12 @@ export async function getValidatorStakeInfo(
 // UpdateValidatorListBalance and RemoveValidatorFromPool.
 export function recordedTransientStakeSeed(info: ValidatorStakeInfo): BN {
   return new BN(info.transient_seed_suffix.toString());
+}
+
+// The validator seed recorded in the validator list, chosen at AddValidatorToPool and fixed for the
+// validator's life: the seed findValidatorStakeAccount needs to reach the validator's stake account.
+export function recordedValidatorSeed(info: ValidatorStakeInfo): number {
+  return info.validator_seed_suffix;
 }
 
 // Whether the validator list records transient stake in flight for this validator.
@@ -533,15 +547,9 @@ export async function addValidatorToStakePool(
   );
   await provider.sendAndConfirm(depositTx, []);
 
-  const [validatorStakeAccount] = PublicKey.findProgramAddressSync([
-    validatorVoteAccount.toBuffer(),
-    stakePool.toBuffer(),
-  ],
-    STAKE_POOL_PROGRAM_ID
-  );
-
   // build the AddValidatorToPool instruction
   const seed = 0;
+  const validatorStakeAccount = findValidatorStakeAccount(validatorVoteAccount, stakePool, seed);
   const addValidatorIx = new TransactionInstruction({
     programId: STAKE_POOL_PROGRAM_ID,
     keys: [
@@ -596,9 +604,10 @@ export async function getStakePoolSharePrice(
 }
 
 
-// Builds the SPL UpdateValidatorListBalance instruction for a single validator. The transient
-// stake account is derived from `transientStakeSeed`, which must be the validator list's
-// `transient_seed_suffix`: SPL skips the (validator, transient) pair otherwise.
+// Builds the SPL UpdateValidatorListBalance instruction for a single validator. The stake accounts
+// are derived from `transientStakeSeed` and `validatorSeed`, which must be the validator list's
+// `transient_seed_suffix` and `validator_seed_suffix`: SPL skips the (validator, transient) pair
+// otherwise.
 export function buildUpdateValidatorListBalanceIx(
   validatorVoteAccount: PublicKey,
   stakePoolAccount: PublicKey,
@@ -606,6 +615,7 @@ export function buildUpdateValidatorListBalanceIx(
   validatorListAccount: PublicKey,
   poolReserveStakeAccount: PublicKey,
   transientStakeSeed: number | BN,
+  validatorSeed: number = 0,
   noMerge: boolean = false // false: merge matured transient stake accounts
 ): TransactionInstruction {
   const transientStakeAccount = findTransientStakeAccount(
@@ -613,7 +623,7 @@ export function buildUpdateValidatorListBalanceIx(
     stakePoolAccount,
     transientStakeSeed
   );
-  const validatorStakeAccount = findValidatorStakeAccount(validatorVoteAccount, stakePoolAccount);
+  const validatorStakeAccount = findValidatorStakeAccount(validatorVoteAccount, stakePoolAccount, validatorSeed);
 
   // serialize UpdateValidatorListBalance instruction data
   const startIndex = 0; // start from the first validator
@@ -641,25 +651,27 @@ export function buildUpdateValidatorListBalanceIx(
   });
 }
 
-// Sends UpdateValidatorListBalance for a single validator. When `transientStakeSeed` is not given
-// it is read from the validator list (`transient_seed_suffix`), which is what SPL checks the
-// transient account against, so callers do not need to track the seed in flight; this throws if
-// the validator has no entry in the list (e.g. after CleanupRemovedValidatorEntries), so pass the
-// seed explicitly in that case.
+// Sends UpdateValidatorListBalance for a single validator. A seed that is not given is read from
+// the validator list (`transient_seed_suffix`, `validator_seed_suffix`), which is what SPL checks
+// the stake accounts against, so callers do not need to track them; this throws if the validator
+// has no entry in the list (e.g. after CleanupRemovedValidatorEntries), so pass both seeds
+// explicitly in that case.
 export async function updateValidatorListBalance(
   validatorVoteAccount: PublicKey,
   stakePoolAccount: PublicKey,
   poolWithdrawAuthority: PublicKey,
   validatorListAccount: PublicKey,
   poolReserveStakeAccount: PublicKey,
-  transientStakeSeed?: number | BN
+  transientStakeSeed?: number | BN,
+  validatorSeed?: number
 ) {
 
   const provider = AnchorProvider.local(undefined, CONFIRMED_OPTS);
 
-  if (transientStakeSeed === undefined) {
+  if (transientStakeSeed === undefined || validatorSeed === undefined) {
     const info = await getValidatorStakeInfo(provider.connection, validatorListAccount, validatorVoteAccount);
-    transientStakeSeed = recordedTransientStakeSeed(info);
+    transientStakeSeed ??= recordedTransientStakeSeed(info);
+    validatorSeed ??= recordedValidatorSeed(info);
   }
 
   const updateValidatorListBalanceIx = buildUpdateValidatorListBalanceIx(
@@ -668,7 +680,8 @@ export async function updateValidatorListBalance(
     poolWithdrawAuthority,
     validatorListAccount,
     poolReserveStakeAccount,
-    transientStakeSeed
+    transientStakeSeed,
+    validatorSeed
   );
 
   // send the UpdateValidatorListBalance transaction

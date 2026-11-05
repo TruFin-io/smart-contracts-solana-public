@@ -2,7 +2,14 @@ import * as anchor from "@coral-xyz/anchor";
 import { AnchorProvider, BN, Program, Wallet } from "@coral-xyz/anchor";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import * as fs from "fs";
-import { getStakePool, getValidatorStakeInfo, randomStakeSeed, transientStakeSeedFor } from "../tests/helpers";
+import {
+  findValidatorStakeAccount,
+  getStakePool,
+  getValidatorStakeInfo,
+  randomStakeSeed,
+  recordedValidatorSeed,
+  transientStakeSeedFor,
+} from "../tests/helpers";
 import { getConnection, getStakePoolAccount, getStakePoolProgramId, getStakerProgramId, parseU64Arg } from "./utils";
 
 // Get the Solana connection
@@ -68,13 +75,6 @@ async function main() {
     stake_pool_program_id
   );
 
-  const [validatorStakeAccount] = PublicKey.findProgramAddressSync([
-    validatorVoteAccount.toBuffer(),
-    stake_pool_account.toBuffer(),
-  ],
-  stake_pool_program_id
-  );
-
   // default the ephemeral seed to a fresh random value; an explicit seed can be passed to
   // reuse/route around a specific ephemeral PDA.
   const ephemeralStakeSeed = ephemeralSeedArg ?? randomStakeSeed();
@@ -90,6 +90,9 @@ async function main() {
   // the transient seed must be the one recorded in the validator list while transient stake is
   // in flight, and a fresh random seed otherwise; an explicit seed overrides it
   const validatorInfo = await getValidatorStakeInfo(connection, stakePool.validatorList, validatorVoteAccount);
+  const validatorStakeAccount = findValidatorStakeAccount(
+    validatorVoteAccount, stake_pool_account, recordedValidatorSeed(validatorInfo), stake_pool_program_id
+  );
   const transientStakeSeed = transientSeedArg ?? transientStakeSeedFor(validatorInfo);
   const [transientStakeAccount] = PublicKey.findProgramAddressSync(
     [

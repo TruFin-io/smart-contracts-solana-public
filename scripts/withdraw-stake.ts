@@ -4,7 +4,14 @@ import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, StakeProgram, SystemProgram, Transaction, TransactionInstruction } from "@solana/web3.js";
 import * as fs from "fs";
 import * as os from "os";
-import { decodeValidatorListAccount, findValidatorStakeInfo, getStakePool, recordedTransientStakeSeed } from "../tests/helpers";
+import {
+  decodeValidatorListAccount,
+  findValidatorStakeAccount,
+  findValidatorStakeInfo,
+  getStakePool,
+  recordedTransientStakeSeed,
+  recordedValidatorSeed,
+} from "../tests/helpers";
 import { StakePool } from "../tests/stake_pool/types";
 import { getConnection, getStakePoolAccount, getStakePoolProgramId } from "./utils";
 
@@ -228,18 +235,14 @@ async function getStakeAccountToSplit(
   sharePrice: number
 ): Promise<PublicKey | undefined> {
 
-  const [validatorStakeAccount] = PublicKey.findProgramAddressSync(
-    [
-      validatorVoteAccount.toBuffer(),
-      stake_pool_account.toBuffer(),
-    ],
-    stake_pool_program_id
+  // the stake accounts are the ones the validator list's seeds name, not seed 0
+  const validators = await decodeValidatorListAccount(connection, stakePool.validatorList);
+  const validatorInfo = findValidatorStakeInfo(validators, validatorVoteAccount);
+  const validatorStakeAccount = findValidatorStakeAccount(
+    validatorVoteAccount, stake_pool_account, recordedValidatorSeed(validatorInfo), stake_pool_program_id
   );
   console.log("Validator stake account:", validatorStakeAccount.toBase58());
 
-  // the transient account in flight is the one recorded in the validator list, not seed 0
-  const validators = await decodeValidatorListAccount(connection, stakePool.validatorList);
-  const validatorInfo = findValidatorStakeInfo(validators, validatorVoteAccount);
   const transientStakeSeed = recordedTransientStakeSeed(validatorInfo);
   const [transientStakeAccount] = PublicKey.findProgramAddressSync(
     [

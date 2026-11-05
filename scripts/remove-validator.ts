@@ -2,7 +2,13 @@ import * as anchor from "@coral-xyz/anchor";
 import { AnchorProvider, Program, Wallet } from "@coral-xyz/anchor";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import * as fs from "fs";
-import { getStakePool, getValidatorStakeInfo, recordedTransientStakeSeed } from "../tests/helpers";
+import {
+  findValidatorStakeAccount,
+  getStakePool,
+  getValidatorStakeInfo,
+  recordedTransientStakeSeed,
+  recordedValidatorSeed,
+} from "../tests/helpers";
 import { getConnection, getStakePoolProgramId, getStakerProgramId, getStakePoolAccount } from "./utils";
 
 // Get the Solana connection
@@ -45,18 +51,15 @@ async function main() {
     stake_pool_program_id
   );
 
-  const [validatorStakeAccount] = PublicKey.findProgramAddressSync([
-      validatorVoteAccount.toBuffer(),
-      stake_pool_account.toBuffer(),
-    ],
-    stake_pool_program_id
+  // SPL checks the stake accounts against the seeds recorded in the validator list. The transient
+  // seed changes every time a transient is created with a new seed (see README "Ephemeral and
+  // transient stake seeds"), so neither may be assumed to be 0
+  const validatorInfo = await getValidatorStakeInfo(provider.connection, stakePool.validatorList, validatorVoteAccount);
+  const validatorStakeAccount = findValidatorStakeAccount(
+    validatorVoteAccount, stake_pool_account, recordedValidatorSeed(validatorInfo), stake_pool_program_id
   );
   console.log("validatorStakeAccount:", validatorStakeAccount.toBase58());
 
-  // SPL checks the transient account against the seed recorded in the validator list, which
-  // changes every time a transient is created with a new seed (see README "Ephemeral and
-  // transient stake seeds"), so it must not be assumed to be 0
-  const validatorInfo = await getValidatorStakeInfo(provider.connection, stakePool.validatorList, validatorVoteAccount);
   const transientStakeSeed = recordedTransientStakeSeed(validatorInfo);
   const [transientStakeAccount] = PublicKey.findProgramAddressSync(
     [

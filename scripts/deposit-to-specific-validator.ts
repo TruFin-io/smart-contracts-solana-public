@@ -4,7 +4,14 @@ import { Account, createAssociatedTokenAccountInstruction, getAccount, getAssoci
 import { Keypair, LAMPORTS_PER_SOL, PublicKey, Transaction, TransactionInstruction } from "@solana/web3.js";
 import * as fs from "fs";
 import * as os from "os";
-import { getStakePool, getValidatorStakeInfo, randomStakeSeed, transientStakeSeedFor } from "../tests/helpers";
+import {
+  findValidatorStakeAccount,
+  getStakePool,
+  getValidatorStakeInfo,
+  randomStakeSeed,
+  recordedValidatorSeed,
+  transientStakeSeedFor,
+} from "../tests/helpers";
 import { getConnection, getStakePoolProgramId, getStakerProgramId, getStakePoolAccount } from "./utils";
 
 // Get the Solana connection
@@ -136,13 +143,9 @@ async function main() {
     stake_pool_program_id
   );
 
-  // derive the validator stake account PDA
-  const [validatorStakeAccount] = PublicKey.findProgramAddressSync(
-    [
-      validatorVoteAccount.toBuffer(),
-      stake_pool_account.toBuffer(),
-    ],
-    stake_pool_program_id
+  // derive the validator stake account PDA from the validator seed recorded in the list
+  const validatorStakeAccount = findValidatorStakeAccount(
+    validatorVoteAccount, stake_pool_account, recordedValidatorSeed(validatorInfo), stake_pool_program_id
   );
 
   // deposit to specific validator instruction
